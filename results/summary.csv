@@ -1,0 +1,5 @@
+plan,total_travel_km,shifts_filled,shifts_unfilled,overall_fill_pct,rural_fill_pct,lowest_site_fill_pct,max_worker_km,avg_km_per_shift
+Manual rule,4321.8,118,15,88.7,33.3,16.7,472.0,36.6
+Lowest travel,3541.6,118,15,88.7,38.9,16.7,307.6,30.0
++ Site equity,3915.6,118,15,88.7,83.3,80.0,347.4,33.2
++ Staff fairness,3997.8,118,15,88.7,83.3,80.0,272.2,33.9

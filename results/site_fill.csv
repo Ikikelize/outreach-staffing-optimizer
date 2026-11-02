@@ -1,0 +1,49 @@
+site,type,needed,filled,fill_pct,plan
+P1,peri-urban,10,10,100.0,Manual rule
+P2,peri-urban,10,10,100.0,Manual rule
+P3,peri-urban,10,10,100.0,Manual rule
+P4,peri-urban,10,7,70.0,Manual rule
+R1,rural,6,4,66.7,Manual rule
+R2,rural,6,1,16.7,Manual rule
+R3,rural,6,1,16.7,Manual rule
+U1,urban,15,15,100.0,Manual rule
+U2,urban,15,15,100.0,Manual rule
+U3,urban,15,15,100.0,Manual rule
+U4,urban,15,15,100.0,Manual rule
+U5,urban,15,15,100.0,Manual rule
+P1,peri-urban,10,9,90.0,Lowest travel
+P2,peri-urban,10,8,80.0,Lowest travel
+P3,peri-urban,10,10,100.0,Lowest travel
+P4,peri-urban,10,9,90.0,Lowest travel
+R1,rural,6,3,50.0,Lowest travel
+R2,rural,6,1,16.7,Lowest travel
+R3,rural,6,3,50.0,Lowest travel
+U1,urban,15,15,100.0,Lowest travel
+U2,urban,15,15,100.0,Lowest travel
+U3,urban,15,15,100.0,Lowest travel
+U4,urban,15,15,100.0,Lowest travel
+U5,urban,15,15,100.0,Lowest travel
+P1,peri-urban,10,8,80.0,+ Site equity
+P2,peri-urban,10,8,80.0,+ Site equity
+P3,peri-urban,10,8,80.0,+ Site equity
+P4,peri-urban,10,8,80.0,+ Site equity
+R1,rural,6,5,83.3,+ Site equity
+R2,rural,6,5,83.3,+ Site equity
+R3,rural,6,5,83.3,+ Site equity
+U1,urban,15,15,100.0,+ Site equity
+U2,urban,15,15,100.0,+ Site equity
+U3,urban,15,12,80.0,+ Site equity
+U4,urban,15,15,100.0,+ Site equity
+U5,urban,15,14,93.3,+ Site equity
+P1,peri-urban,10,8,80.0,+ Staff fairness
+P2,peri-urban,10,8,80.0,+ Staff fairness
+P3,peri-urban,10,8,80.0,+ Staff fairness
+P4,peri-urban,10,8,80.0,+ Staff fairness
+R1,rural,6,5,83.3,+ Staff fairness
+R2,rural,6,5,83.3,+ Staff fairness
+R3,rural,6,5,83.3,+ Staff fairness
+U1,urban,15,15,100.0,+ Staff fairness
+U2,urban,15,15,100.0,+ Staff fairness
+U3,urban,15,12,80.0,+ Staff fairness
+U4,urban,15,15,100.0,+ Staff fairness
+U5,urban,15,14,93.3,+ Staff fairness

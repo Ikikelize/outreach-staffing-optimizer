@@ -1,0 +1,11 @@
+min_site_fill_pct,status,total_travel_km
+0.0,Optimal,3541.6
+20.0,Optimal,3563.4
+30.0,Optimal,3563.4
+40.0,Optimal,3610.2
+50.0,Optimal,3610.2
+60.0,Optimal,3691.8
+70.0,Optimal,3855.6
+80.0,Optimal,3915.6
+83.3,Optimal,4105.0
+90.0,Infeasible,
