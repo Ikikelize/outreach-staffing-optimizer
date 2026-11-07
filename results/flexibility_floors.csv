@@ -1,0 +1,9 @@
+skills,min_site_fill_pct,status,shifts_filled,total_travel_km
+strict,0.0,Optimal,118,3541.6
+strict,60.0,Optimal,118,3691.8
+strict,80.0,Optimal,118,3915.6
+strict,83.3,Optimal,118,4105.0
+flexible,0.0,Optimal,118,3532.4
+flexible,60.0,Optimal,118,3681.0
+flexible,80.0,Optimal,118,3903.8
+flexible,83.3,Optimal,118,4094.6

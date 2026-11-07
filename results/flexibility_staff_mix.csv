@@ -1,0 +1,11 @@
+clinical_staff,counselling_staff,skills,shifts_filled_80pct_floor,total_travel_km_80pct_floor,highest_feasible_floor_pct
+14,16,strict,110,3799.0,80.0
+14,16,flexible,110,3799.0,80.0
+16,14,strict,115,3843.6,80.0
+16,14,flexible,115,3840.8,80.0
+18,12,strict,118,3915.6,83.3
+18,12,flexible,118,3903.8,83.3
+20,10,strict,116,3908.8,83.3
+20,10,flexible,119,3915.2,86.7
+22,8,strict,111,3725.2,80.0
+22,8,flexible,119,3887.0,86.7

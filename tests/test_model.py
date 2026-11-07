@@ -4,6 +4,7 @@ Run with:  python -m pytest -q
 """
 
 import pulp
+import pytest
 
 from src.baseline import greedy_nearest
 from src.data import make_instance
@@ -86,7 +87,7 @@ def test_tiny_case_by_hand():
     demand = pd.DataFrame([{"site": "S", "skill": "clinical", "day": "Mon", "need": 1}])
     dist = pd.DataFrame([[10.0], [1.0]], index=["A", "B"], columns=["S"])
     rows, _ = solve(Instance(workers, sites, demand, dist))
-    assert rows == [{"worker": "B", "site": "S", "day": "Mon"}]
+    assert rows == [{"worker": "B", "site": "S", "day": "Mon", "shift": "clinical"}]
 
 
 def test_results_hold_on_other_regions():
@@ -100,3 +101,21 @@ def test_results_hold_on_other_regions():
         if len(best) == len(manual):
             assert score(inst, best, "")[0]["total_travel_km"] <= \
                    score(inst, manual, "")[0]["total_travel_km"]
+
+
+def test_flexibility_rules():
+    """With flexibility, clinical staff may cover counselling, never the reverse."""
+    rows, status = solve(INST, min_fill=0.8, flex=True)
+    assert status == "Optimal" and check_feasible(INST, rows, flex=True)
+    skill = INST.workers.set_index("id")["skill"]
+    assert all(not (skill[r["worker"]] == "counselling" and r["shift"] == "clinical")
+               for r in rows)
+    strict, _ = solve(INST, min_fill=0.8)
+    assert len(rows) >= len(strict)
+    # A clinical worker on a counselling shift breaks the strict rules.
+    W = INST.workers
+    w = W[(W.skill == "clinical") & (W.day_off != "Mon")].iloc[0]["id"]
+    bad = [{"worker": w, "site": "U1", "day": "Mon", "shift": "counselling"}]
+    assert check_feasible(INST, bad, flex=True)
+    with pytest.raises(AssertionError, match="not allowed"):
+        check_feasible(INST, bad, flex=False)

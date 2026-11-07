@@ -29,7 +29,7 @@ def greedy_nearest(inst):
                 if not options:
                     break
                 best = min(options, key=lambda w: inst.dist_km.loc[w, r.site])
-                rows.append({"worker": best, "site": r.site, "day": d})
+                rows.append({"worker": best, "site": r.site, "day": d, "shift": r.skill})
                 busy_today.add(best)
                 shifts_left[best] -= 1
     return rows

@@ -2,15 +2,24 @@
 
 import pandas as pd
 
+from .model import shifts_allowed
 
-def check_feasible(inst, rows):
-    """Raise AssertionError if the roster breaks any hard rule."""
+
+def check_feasible(inst, rows, flex: bool = False):
+    """Raise AssertionError if the roster breaks any hard rule.
+
+    Each row may carry a "shift" type; if it does not, the shift is taken to
+    match the worker's own skill.
+    """
     W = inst.workers.set_index("id")
     need = {(r.site, r.skill, r.day): int(r.need) for r in inst.demand.itertuples()}
-    df = pd.DataFrame(rows, columns=["worker", "site", "day"])
+    df = pd.DataFrame(rows, columns=["worker", "site", "day", "shift"])
     if df.empty:
         return True
-    df["skill"] = df["worker"].map(W["skill"])
+    df["skill"] = df["shift"].fillna(df["worker"].map(W["skill"]))
+    allowed = [k in shifts_allowed(W.loc[w, "skill"], flex)
+               for w, k in zip(df["worker"], df["skill"])]
+    assert all(allowed), "worker filled a shift type they are not allowed to fill"
 
     assert not df.duplicated(["worker", "day"]).any(), "worker in two places on one day"
     assert (df["day"] != df["worker"].map(W["day_off"])).all(), "worker rostered on day off"

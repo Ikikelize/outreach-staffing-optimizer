@@ -2,7 +2,7 @@
 
 Each week, someone running a community health program has to decide which clinical staff and counsellors go to which service sites. This project asks whether an integer programming model can make that decision better than a common manual rule, and what it costs to make the roster fairer to remote communities and to staff.
 
-On the main test region, the model cuts total travel by 18.1%. With a coverage floor added, it lifts the worst-served site from 17% to 80% of its shifts while still using 9.4% less travel than the manual rule. The same pattern holds across 30 other randomly generated regions.
+On the main test region, the model cuts total travel by 18.1%. With a coverage floor added, it lifts the worst-served site from 17% to 80% of its shifts while still using 9.4% less travel than the manual rule. The same pattern holds across 30 other randomly generated regions. A further test lets clinical staff cover counselling shifts and finds that this helps only when clinical staff have spare capacity.
 
 All data is synthetic. No real staff, sites or organizations are used.
 
@@ -10,7 +10,7 @@ All data is synthetic. No real staff, sites or organizations are used.
 
 ## The setting
 
-Most outreach staff live near the city, while some sites are rural and far away. There are also fewer staff-days than shifts, so some shifts will go unfilled whatever the roster. The real choice is which shifts go unfilled and who does the long drives.
+Most outreach staff live near the city, while some sites are rural and far away. There are also fewer staff-days than shifts, so some shifts will go unfilled whatever the roster. The question is which shifts go unfilled and who does the long drives.
 
 The main test region (random seed 42) has:
 
@@ -31,7 +31,7 @@ The main test region (random seed 42) has:
 
 ## The model
 
-The decision variable `x[w, s, d]` equals 1 if worker *w* works at site *s* on day *d*. Every plan must respect the same rules: one site per worker per day, no work on a day off, at most four shifts a week, skills must match, and no site gets more staff than it asked for. The site floor and the travel cap are optional constraints.
+The decision variable `x[w, s, k, d]` equals 1 if worker *w* fills a shift of type *k* (clinical or counselling) at site *s* on day *d*. Every plan must respect the same rules: one site per worker per day, no work on a day off, at most four shifts a week, skills must match, and no site gets more staff than it asked for. The site floor, the travel cap and skill flexibility (described below) are optional.
 
 The model is solved in two steps. Step 1 finds the largest number of shifts that any valid roster can fill. Step 2 keeps that number fixed and finds the roster with the least travel. This avoids choosing a penalty weight for unfilled shifts. A weight large enough to guarantee maximum fill also inflates the objective, and the solver's default optimality tolerance then becomes tens of km of travel.
 
@@ -63,21 +63,45 @@ One region could be a lucky draw, so the comparison was repeated on 30 other ran
 - The manual rule left at least one site with no staff at all in 16 of the 30 regions. The lowest-travel plan did so in 6.
 - The 80% site floor was feasible in all 30 regions. The equity plan still used a median 18.5% less travel than the manual rule (range 9.3% to 34.2%), and cost a median 7.3% more than the lowest-travel plan.
 
-Full results are in `results/robustness.csv`.
+Full results are in `results/other_regions.csv`.
 
 ## The cost of fairness
 
 ![Trade-offs for site coverage and staff travel](figures/tradeoff.png)
 
-Panel A raises the coverage floor that every site must meet. Travel rises slowly up to a 60% floor (+150 km), then faster. The highest floor this staff can meet is 83.3%, which costs 4,105 km and is still 5.0% below the manual rule. Floors of 84% and above are infeasible. At that point a manager needs more staff, not a better roster.
+Panel A raises the coverage floor that every site must meet. Travel rises slowly up to a 60% floor (+150 km), then faster. The highest floor this staff can meet is 83.3%, which costs 4,105 km and is still 5.0% below the manual rule. Floors of 84% and above are infeasible, so reaching them would take more staff.
 
 Panel B caps the travel of any one worker while keeping the 80% floor. Caps of 240 km and above still fill all 118 shifts, and total travel falls from 4,087 km to 3,916 km as the cap is loosened. Below 240 km, one shift is lost (hollow points). The 280 km cap used in the main comparison is an illustrative middle point, not a recommendation.
+
+## Letting clinical staff cover counselling shifts
+
+In home care scheduling, letting higher-skilled staff cover lower-skilled tasks can cut costs substantially (for example, Naderi, Begen, Zaric et al., *Omega*, 2023). This test asks whether the same idea makes fairness cheaper here. With the `flex` option, clinical staff may fill counselling shifts. Counsellors may not fill clinical shifts.
+
+On the main region, flexibility made almost no difference:
+
+| Skills | Shifts filled | Travel, no floor | Travel, 80% floor | Cost of the 80% floor | Highest feasible floor |
+|---|---:|---:|---:|---:|---:|
+| Strict | 118 | 3,542 km | 3,916 km | +374 km (+10.6%) | 83.3% |
+| Flexible | 118 | 3,532 km | 3,904 km | +371 km (+10.5%) | 83.3% |
+
+The reason is that clinical staff are the scarce group. On every day, the clinical staff available fall short of or exactly meet clinical demand, so there are no spare clinicians to send to counselling shifts.
+
+![Effect of skill flexibility by staff mix](figures/flexibility.png)
+
+To check this, the 30 workers were split differently between the two skills, with the same sites, demand and random seed. Where the dots overlap, flexibility changed nothing.
+
+- With 14 or 16 clinical staff, flexibility changed neither the shifts filled nor the highest feasible floor.
+- With 20 clinical staff, it filled 3 more shifts (119 instead of 116) and raised the highest feasible floor from 83.3% to 86.7%.
+- With 22 clinical staff, it filled 8 more shifts (119 instead of 111) and raised the highest floor from 80.0% to 86.7%.
+
+Across the 30 other regions, with the usual 18 / 12 split, flexibility filled one extra shift in 5 regions and never raised the highest feasible floor. So in this setting, skill flexibility helps fairness only when the more skilled group has spare capacity. One likely reason for the difference from the home care study is that there the provider also decides how many caregivers to call in, while here the staff are fixed. Results are in `results/flexibility_*.csv`.
 
 ## Limitations
 
 - Distances are straight-line distance multiplied by 1.3, not real road routes or travel times.
 - The model covers one week with fixed demand. It ignores absences, leave and changes in patient numbers.
 - All workers with the same skill are treated as interchangeable. Real teams differ in experience, language and seniority.
+- Flexibility is treated as free. In practice, a clinician covering a counselling session may need training, and the quality of care may differ.
 - The weekly cap of four shifts equals each worker's available days here, so it never binds. It is kept in the model for settings where staff have more available days than shifts.
 - The 80% floor and 280 km cap are chosen to illustrate the trade-offs.
 
@@ -87,8 +111,8 @@ Next steps would be to use real travel times, add uncertain demand and absences,
 
 ```bash
 pip install -r requirements.txt
-python run_experiments.py   # about 45 seconds; writes results/*.csv and figures/*.png
-python -m pytest -q         # 9 checks
+python run_experiments.py   # about 2 minutes; writes results/*.csv and figures/*.png
+python -m pytest -q         # 10 checks
 ```
 
 Requires Python 3.10 or newer and PuLP 4.0 or newer.
@@ -100,7 +124,7 @@ src/data.py          synthetic workers, sites, demand and distances
 src/baseline.py      the manual rostering rule
 src/model.py         two-step integer programming model (PuLP + HiGHS)
 src/evaluate.py      rule checker and scoring
-run_experiments.py   main comparison, both sweeps, 30-region check and charts
+run_experiments.py   main comparison, sweeps, 30-region check, flexibility test, charts
 results/             rosters and result tables (CSV)
 figures/             charts used in this README
 tests/               automated checks

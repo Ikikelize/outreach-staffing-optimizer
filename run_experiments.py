@@ -3,6 +3,7 @@
 Usage:  python run_experiments.py
 """
 
+from fractions import Fraction
 from pathlib import Path
 
 import matplotlib
@@ -83,7 +84,7 @@ def cap_sweep(inst):
     return pd.DataFrame(rows)
 
 
-def robustness(seeds=range(1, 31)):
+def other_regions(seeds=range(1, 31)):
     """Repeat the main comparison on 30 other random regions.
 
     Checks that the results are not an artefact of one lucky instance.
@@ -105,6 +106,106 @@ def robustness(seeds=range(1, 31)):
             row[f"{name}_worst_site_pct"] = sm["lowest_site_fill_pct"]
         rows.append(row)
     return pd.DataFrame(rows)
+
+
+# Every site's weekly need is 6, 10 or 15 shifts, so the floors that can make a
+# difference are the fractions n/6, n/10 and n/15.
+FLOORS = sorted({float(Fraction(n, m)) for m in (6, 10, 15) for n in range(1, m + 1)})
+
+
+def highest_floor(inst, flex=False):
+    """Highest coverage floor every site can meet, found by bisection."""
+    lo, hi, best = 0, len(FLOORS) - 1, 0.0
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        rows, _ = solve(inst, min_fill=FLOORS[mid] - 1e-9, flex=flex)
+        if rows:
+            best, lo = FLOORS[mid], mid + 1
+        else:
+            hi = mid - 1
+    return best
+
+
+def flexibility(inst):
+    """Strict skills vs letting clinical staff cover counselling shifts.
+
+    Returns the main region's floor sweep under both rules, a staff-mix
+    sensitivity (30 workers split differently between the two skills) and
+    a check on 30 other regions.
+    """
+    floors = []
+    for flex in (False, True):
+        for f in [0.0, 0.6, SITE_FLOOR, 5 / 6]:
+            r, status = solve(inst, min_fill=f, flex=flex)
+            sm = score(inst, r, "")[0] if r else {}
+            floors.append({"skills": "flexible" if flex else "strict",
+                           "min_site_fill_pct": round(100 * f, 1), "status": status,
+                           "shifts_filled": sm.get("shifts_filled"),
+                           "total_travel_km": sm.get("total_travel_km")})
+
+    mix = []
+    for n_clin in (14, 16, 18, 20, 22):
+        m = make_instance(n_clinical=n_clin, n_counsellors=30 - n_clin)
+        for flex in (False, True):
+            r, _ = solve(m, min_fill=SITE_FLOOR, flex=flex)
+            check_feasible(m, r, flex=flex)
+            sm = score(m, r, "")[0]
+            mix.append({"clinical_staff": n_clin, "counselling_staff": 30 - n_clin,
+                        "skills": "flexible" if flex else "strict",
+                        "shifts_filled_80pct_floor": sm["shifts_filled"],
+                        "total_travel_km_80pct_floor": sm["total_travel_km"],
+                        "highest_feasible_floor_pct": round(100 * highest_floor(m, flex), 1)})
+
+    regions = []
+    for seed in range(1, 31):
+        m = make_instance(seed=seed)
+        row = {"seed": seed}
+        for flex in (False, True):
+            tag = "flexible" if flex else "strict"
+            r, _ = solve(m, flex=flex)
+            row[f"{tag}_filled"] = score(m, r, "")[0]["shifts_filled"]
+            row[f"{tag}_highest_floor_pct"] = round(100 * highest_floor(m, flex), 1)
+        regions.append(row)
+    return pd.DataFrame(floors), pd.DataFrame(mix), pd.DataFrame(regions)
+
+
+def fig_flexibility(mix):
+    """Paired dots: strict skills vs flexible skills for each staff mix.
+
+    Dots rather than bars, because the y-axes do not start at zero.
+    """
+    strict = mix[mix.skills == "strict"].set_index("clinical_staff")
+    flex = mix[mix.skills == "flexible"].set_index("clinical_staff")
+    xs = np.arange(len(strict))
+    labels = [f"{c} / {30 - c}" for c in strict.index]
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(12, 4.2))
+    for ax, col, title, fmt in [
+            (a1, "shifts_filled_80pct_floor", "A. Shifts filled with an 80% site floor", "{:.0f}"),
+            (a2, "highest_feasible_floor_pct", "B. Highest floor every site can meet (%)", "{:.1f}")]:
+        for x, s_val, f_val in zip(xs, strict[col], flex[col]):
+            ax.plot([x, x], [s_val, f_val], color=GRID, lw=3, zorder=1)
+            ax.annotate(fmt.format(s_val), (x, s_val), xytext=(-8, 0),
+                        textcoords="offset points", ha="right", va="center",
+                        fontsize=8, color=INK2)
+            if f_val != s_val:
+                ax.annotate(fmt.format(f_val), (x, f_val), xytext=(8, 0),
+                            textcoords="offset points", ha="left", va="center",
+                            fontsize=8, color=INK)
+        ax.scatter(xs, strict[col], s=60, color="#8a8984", zorder=2, label="Strict skills")
+        ax.scatter(xs, flex[col], s=60, color="#2a78d6", zorder=3,
+                   label="Clinical staff may cover counselling")
+        vals = list(strict[col]) + list(flex[col])
+        pad = 0.15 * (max(vals) - min(vals))
+        ax.set_ylim(min(vals) - pad, max(vals) + pad)
+        ax.set_xlim(-0.6, len(xs) - 0.4)
+        ax.set_xticks(xs, labels)
+        ax.set_xlabel("Clinical / counselling staff (30 in total; main region is 18 / 12)")
+        ax.set_title(title, loc="left", fontweight="bold", fontsize=10)
+        ax.grid(axis="y", color=GRID, lw=.6)
+    a1.legend(frameon=False, loc="lower right", fontsize=8)
+    fig.tight_layout()
+    fig.savefig(FIG / "flexibility.png", dpi=160)
+    plt.close(fig)
 
 
 def fig_map(inst, roster):
@@ -234,20 +335,28 @@ def main():
     sw.to_csv(RES / "equity_sweep.csv", index=False)
     caps = cap_sweep(inst)
     caps.to_csv(RES / "cap_sweep.csv", index=False)
-    rob = robustness()
-    rob.to_csv(RES / "robustness.csv", index=False)
+    rob = other_regions()
+    rob.to_csv(RES / "other_regions.csv", index=False)
+    flex_floors, flex_mix, flex_regions = flexibility(inst)
+    flex_floors.to_csv(RES / "flexibility_floors.csv", index=False)
+    flex_mix.to_csv(RES / "flexibility_staff_mix.csv", index=False)
+    flex_regions.to_csv(RES / "flexibility_regions.csv", index=False)
 
     fig_map(inst, rosters["+ Staff fairness"])
     fig_comparison(summary, int(inst.demand["need"].sum()))
     manual = summary.set_index("plan").loc["Manual rule"]
     fig_tradeoff(sw, caps, manual["total_travel_km"], manual["lowest_site_fill_pct"],
                  WORKER_CAP_KM)
+    fig_flexibility(flex_mix)
 
     pd.set_option("display.width", 160)
     print(summary.to_string(index=False))
     print(sw.to_string(index=False))
     print(caps.to_string(index=False))
     print(rob.describe().round(1).to_string())
+    print(flex_floors.to_string(index=False))
+    print(flex_mix.to_string(index=False))
+    print(flex_regions.describe().round(1).to_string())
 
 
 if __name__ == "__main__":
